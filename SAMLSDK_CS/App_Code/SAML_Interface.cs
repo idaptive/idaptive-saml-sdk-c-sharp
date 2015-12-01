@@ -58,6 +58,35 @@ namespace SAML_Interface
                 XmlWriterSettings xWriterSettings = new XmlWriterSettings();
                 xWriterSettings.OmitXmlDeclaration = true;
 
+                using (XmlWriter xWriter = XmlWriter.Create(SWriter, xWriterSettings))
+                {
+                    xWriter.WriteStartElement("samlp", "AuthnRequest", "urn:oasis:names:tc:SAML:2.0:protocol");
+                    xWriter.WriteAttributeString("ID", "_" + System.Guid.NewGuid().ToString());
+                    xWriter.WriteAttributeString("Version", "2.0");
+                    xWriter.WriteAttributeString("IssueInstant", DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    xWriter.WriteAttributeString("ProtocolBinding", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST");
+                    xWriter.WriteAttributeString("AssertionConsumerServiceURL", strACSUrl);
+
+                    xWriter.WriteStartElement("saml", "Issuer", "urn:oasis:names:tc:SAML:2.0:assertion");
+                    xWriter.WriteString(strIssuer);
+                    xWriter.WriteEndElement();
+
+                    xWriter.WriteStartElement("samlp", "NameIDPolicy", "urn:oasis:names:tc:SAML:2.0:protocol");
+                    xWriter.WriteAttributeString("Format", "urn:oasis:names:tc:SAML:2.0:nameid-format:unspecified");
+                    xWriter.WriteAttributeString("AllowCreate", "true");
+                    xWriter.WriteEndElement();
+
+                    xWriter.WriteStartElement("samlp", "RequestedAuthnContext", "urn:oasis:names:tc:SAML:2.0:protocol");
+                    xWriter.WriteAttributeString("Comparison", "exact");
+                    xWriter.WriteEndElement();
+
+                    xWriter.WriteStartElement("saml", "AuthnContextClassRef", "urn:oasis:names:tc:SAML:2.0:assertion");
+                    xWriter.WriteString("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport");
+                    xWriter.WriteEndElement();
+
+                    xWriter.WriteEndElement();
+                }
+
                 byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(SWriter.ToString());
                 return System.Convert.ToBase64String(toEncodeAsBytes);           
             }
