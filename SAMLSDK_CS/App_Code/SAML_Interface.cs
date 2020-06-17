@@ -92,7 +92,10 @@ namespace SAML_Interface
             }
         }
 
-        public string GetSAMLLogoutRequest(string destinationUrl, string issuer, string nameIDFormat, string nameID)
+        public string GetSAMLLogoutRequest(string destinationUrl,
+                                            string issuer,
+                                            string nameIDFormat,
+                                            string nameID)
         {
             string SAML20_LogoutRequest_FORMAT =
                 "<samlp:LogoutRequest " +
@@ -113,34 +116,26 @@ namespace SAML_Interface
                         "{6}" +
                     "</saml:NameID>" +
                 "</samlp:LogoutRequest>";
-            try
+
+            var logoutRequest = string.Format(SAML20_LogoutRequest_FORMAT,
+                    Guid.NewGuid().ToString(),
+                    DateTime.UtcNow,
+                    destinationUrl,
+                    DateTime.UtcNow + TimeSpan.FromHours(1),
+                    issuer,
+                    nameIDFormat, //"urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+                    nameID //test@elections.ny.gov
+                 );
+            using (var ms = new MemoryStream())
+            using (var ds = new DeflateStream(ms, CompressionMode.Compress))
             {
-                var logoutRequest = string.Format(SAML20_LogoutRequest_FORMAT,
-                        Guid.NewGuid().ToString(),
-                        DateTime.UtcNow,
-                        destinationUrl,
-                        DateTime.UtcNow + TimeSpan.FromHours(1),
-                        issuer,
-                        nameIDFormat, //"urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
-                        nameID //test@elections.ny.gov
-                     );
-                using (var ms1 = new MemoryStream())
-                {
-                    using (var ds = new DeflateStream(ms1, CompressionMode.Compress))
-                    {
-                        var b = UTF8Encoding.UTF8.GetBytes(logoutRequest);
-                        ds.Write(b, 0, b.Length);
-                    }
-                    logoutRequest = "SAMLRequest=" + HttpUtility.UrlEncode(Convert.ToBase64String(ms1.ToArray()));
-                }
-                Console.WriteLine("Log Out Url for the is {0} ", logoutRequest);
-                return logoutRequest;
+                var b = UTF8Encoding.UTF8.GetBytes(logoutRequest);
+                ds.Write(b, 0, b.Length);
+                logoutRequest = "SAMLRequest=" + HttpUtility.UrlEncode(Convert.ToBase64String(ms.ToArray()));
             }
-            catch(Exception ex)
-            {
-                Console.WriteLine("Unexpected Exception while getting LogOutUrl", ex);
-                return null;
-            }
+
+            Console.WriteLine("Logout request payload is {0} ", logoutRequest);
+            return logoutRequest;
         }
     }    
 }
