@@ -32,7 +32,7 @@ namespace SAML_Interface
 
             X509Certificate2 cSigningCertificate = new X509Certificate2();
 
-            cSigningCertificate.Import(HttpContext.Current.Server.MapPath(".") + @"\Certificates\SignCertFromCentrify.cer");
+            cSigningCertificate.Import(HttpContext.Current.Server.MapPath(".") + @"\Certificates\SigningCertificate.cer");
 
             return signedXml.CheckSignature(cSigningCertificate, true);
         }
@@ -90,6 +90,52 @@ namespace SAML_Interface
                 byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(SWriter.ToString());
                 return System.Convert.ToBase64String(toEncodeAsBytes);           
             }
+        }
+
+        public string GetSAMLLogoutRequest(string destinationUrl,
+                                            string issuer,
+                                            string nameIDFormat,
+                                            string nameID)
+        {
+            string SAML20_LogoutRequest_FORMAT =
+                "<samlp:LogoutRequest " +
+                        "xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" " +
+                        "xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" " +
+                        "ID =\"_{0}\" " +
+                        "Version =\"2.0\" " +
+                        "IssueInstant =\"{1:yyyy-MM-ddTHH:mm:ss.000Z}\" " +
+                        "Destination =\"{2}\" " +
+                        "NotOnOrAfter=\"{3:yyyy-MM-ddTHH:mm:ss.000Z}\" " +
+                        "Reason=\"urn:oasis:names:tc:SAML:2.0:logout:user\" " +
+                        "Consent=\"urn:oasis:names:tc:SAML:2.0:consent:obtained\">" +
+                    "<saml:Issuer>" +
+                        "{4}" +
+                    "</saml:Issuer>" +
+                    "<saml:NameID " +
+                        "Format=\"{5}\">" +
+                        "{6}" +
+                    "</saml:NameID>" +
+                "</samlp:LogoutRequest>";
+
+            var logoutRequest = string.Format(SAML20_LogoutRequest_FORMAT,
+                    Guid.NewGuid().ToString(),
+                    DateTime.UtcNow,
+                    destinationUrl,
+                    DateTime.UtcNow + TimeSpan.FromHours(1),
+                    issuer,
+                    nameIDFormat, //"urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+                    nameID //test@elections.ny.gov
+                 );
+            using (var ms = new MemoryStream())
+            using (var ds = new DeflateStream(ms, CompressionMode.Compress))
+            {
+                var b = UTF8Encoding.UTF8.GetBytes(logoutRequest);
+                ds.Write(b, 0, b.Length);
+                logoutRequest = "SAMLRequest=" + HttpUtility.UrlEncode(Convert.ToBase64String(ms.ToArray()));
+            }
+
+            Console.WriteLine("Logout request payload is {0} ", logoutRequest);
+            return logoutRequest;
         }
     }    
 }
